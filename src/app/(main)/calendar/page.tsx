@@ -21,6 +21,7 @@ const SOURCE_COLORS: Record<string, string> = {
   CANVAS: "#ef4444",
   GMAIL: "#eab308",
   GRADESCOPE: "#22c55e",
+  ED_DISCUSSION: "#a855f7",
   MANUAL: "#6b7280",
 };
 

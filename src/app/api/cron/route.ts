@@ -3,6 +3,8 @@ import { prisma } from "@/lib/db";
 import { syncGoogleCalendar } from "@/lib/sync/google-calendar";
 import { syncCanvas } from "@/lib/sync/canvas";
 import { syncGmail } from "@/lib/sync/gmail";
+import { syncGradescope } from "@/lib/sync/gradescope";
+import { syncEdDiscussion } from "@/lib/sync/ed-discussion";
 import { processNotifications } from "@/lib/notifications/scheduler";
 
 // This endpoint is called by Vercel Cron or Upstash QStash
@@ -53,6 +55,32 @@ export async function GET(req: NextRequest) {
         userResult.gmail = r;
       } catch (e) {
         userResult.gmail = { error: (e as Error).message };
+      }
+    }
+
+    // Sync Gradescope if configured
+    const gradescopeIntegration = user.integrations.find(
+      (i) => i.type === "GRADESCOPE" && i.status === "ACTIVE"
+    );
+    if (gradescopeIntegration) {
+      try {
+        const r = await syncGradescope(user.id);
+        userResult.gradescope = r;
+      } catch (e) {
+        userResult.gradescope = { error: (e as Error).message };
+      }
+    }
+
+    // Sync Ed Discussion if configured
+    const edIntegration = user.integrations.find(
+      (i) => i.type === "ED_DISCUSSION" && i.status === "ACTIVE"
+    );
+    if (edIntegration) {
+      try {
+        const r = await syncEdDiscussion(user.id);
+        userResult.edDiscussion = r;
+      } catch (e) {
+        userResult.edDiscussion = { error: (e as Error).message };
       }
     }
 

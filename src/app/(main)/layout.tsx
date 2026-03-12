@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
+import { CoachChat } from "@/components/coach-chat";
 
 export default async function MainLayout({
   children,
@@ -17,6 +18,7 @@ export default async function MainLayout({
     <div className="flex h-screen">
       <Sidebar />
       <main className="flex-1 overflow-y-auto p-6">{children}</main>
+      <CoachChat />
     </div>
   );
 }

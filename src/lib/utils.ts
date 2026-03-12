@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { formatDistanceToNow } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -51,4 +52,8 @@ export function getPriorityColor(priority: string): string {
     URGENT: "text-red-600",
   };
   return colors[priority] || "";
+}
+
+export function formatTimeAgo(date: Date): string {
+  return formatDistanceToNow(date, { addSuffix: true });
 }

@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, RefreshCw, AlertTriangle, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import { Plus, RefreshCw, AlertTriangle, CheckCircle2, Target, ChevronRight } from "lucide-react";
 import { DeadlineCard } from "@/components/deadline-card";
 import { AddDeadlineModal } from "@/components/add-deadline-modal";
+import { formatTimeAgo, getSourceLabel } from "@/lib/utils";
 
 interface Deadline {
   id: string;
@@ -14,11 +16,20 @@ interface Deadline {
   priority: string;
   status: string;
   suggested: boolean;
-  tasks: { id: string; completed: boolean }[];
+  tasks: { id: string; title: string; completed: boolean }[];
+}
+
+interface Integration {
+  id: string;
+  type: string;
+  status: string;
+  lastSync: string | null;
+  error: string | null;
 }
 
 export default function DashboardPage() {
   const [deadlines, setDeadlines] = useState<Deadline[]>([]);
+  const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -30,9 +41,16 @@ export default function DashboardPage() {
     setLoading(false);
   }, []);
 
+  const fetchIntegrations = useCallback(async () => {
+    const res = await fetch("/api/integrations");
+    const data = await res.json();
+    setIntegrations(data);
+  }, []);
+
   useEffect(() => {
     fetchDeadlines();
-  }, [fetchDeadlines]);
+    fetchIntegrations();
+  }, [fetchDeadlines, fetchIntegrations]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -42,6 +60,7 @@ export default function DashboardPage() {
       body: JSON.stringify({}),
     });
     await fetchDeadlines();
+    await fetchIntegrations();
     setSyncing(false);
   };
 
@@ -81,6 +100,31 @@ export default function DashboardPage() {
   );
   const completed = confirmed.filter((d) => d.status === "COMPLETED");
 
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfTomorrow = new Date(startOfToday);
+  endOfTomorrow.setDate(endOfTomorrow.getDate() + 2);
+
+  const doToday = confirmed.filter((d) => {
+    if (d.status === "COMPLETED") return false;
+    const due = new Date(d.dueAt);
+    return due < endOfTomorrow;
+  }).sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime());
+
+  const pendingByDue = confirmed
+    .filter((d) => d.status !== "COMPLETED")
+    .sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime());
+  const nextDeadline = pendingByDue[0];
+  const nextTask = nextDeadline?.tasks?.find((t) => !t.completed);
+
+  const lastSyncDate = integrations
+    .map((i) => (i.lastSync ? new Date(i.lastSync) : null))
+    .filter(Boolean) as Date[];
+  const lastSync =
+    lastSyncDate.length > 0
+      ? new Date(Math.max(...lastSyncDate.map((d) => d.getTime())))
+      : null;
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -98,6 +142,20 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-500">
             {confirmed.length} deadlines tracked
           </p>
+          {integrations.length > 0 && (
+            <p className="mt-1 text-xs text-gray-400">
+              {lastSync ? (
+                <>Last synced: {formatTimeAgo(lastSync)}</>
+              ) : (
+                "Sync to see source status"
+              )}
+              {integrations.some((i) => i.error) && (
+                <span className="ml-2 text-amber-600">
+                  · Some sources had errors
+                </span>
+              )}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           <button
@@ -149,6 +207,94 @@ export default function DashboardPage() {
             {completed.length}
           </p>
         </div>
+      </div>
+
+      {/* Sync status per source */}
+      {integrations.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {integrations.map((i) => (
+            <span
+              key={i.id}
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                i.error
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-gray-100 text-gray-700"
+              }`}
+              title={i.error ?? (i.lastSync ? `Synced ${formatTimeAgo(new Date(i.lastSync))}` : "Not synced yet")}
+            >
+              {getSourceLabel(i.type)}
+              {i.error ? ": " + i.error : i.lastSync ? " ✓" : ""}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Focus: Do today + Next action */}
+      <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4">
+        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-gray-900">
+          <Target className="h-5 w-5 text-blue-600" />
+          What should I do now?
+        </h2>
+        {nextDeadline && (
+          <div className="mb-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              Next action
+            </p>
+            <Link
+              href={`/deadline/${nextDeadline.id}`}
+              className="mt-1 flex items-center gap-2 rounded-lg border border-blue-200 bg-white p-3 transition hover:border-blue-300 hover:bg-blue-50/50"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-gray-900">{nextDeadline.title}</p>
+                <p className="text-sm text-gray-500">
+                  Due {new Date(nextDeadline.dueAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  {nextTask && (
+                    <span className="ml-2 text-blue-600">
+                      → First: {nextTask.title}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <ChevronRight className="h-5 w-5 shrink-0 text-gray-400" />
+            </Link>
+          </div>
+        )}
+        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+          Do today
+        </p>
+        <p className="mt-1 text-sm text-gray-600">
+          Due today, overdue, or tomorrow ({doToday.length} items)
+        </p>
+        {doToday.length === 0 ? (
+          <p className="mt-2 text-sm text-gray-500">
+            Nothing due today or tomorrow. Use &quot;All Upcoming&quot; below to plan ahead.
+          </p>
+        ) : (
+          <ul className="mt-2 space-y-1">
+            {doToday.slice(0, 6).map((d) => (
+              <li key={d.id}>
+                <Link
+                  href={`/deadline/${d.id}`}
+                  className="text-sm font-medium text-blue-700 hover:underline"
+                >
+                  {d.title}
+                  <span className="ml-2 text-gray-500 font-normal">
+                    {new Date(d.dueAt) < now
+                      ? " (overdue)"
+                      : new Date(d.dueAt).toDateString() === now.toDateString()
+                        ? " (today)"
+                        : " (tomorrow)"}
+                  </span>
+                </Link>
+              </li>
+            ))}
+            {doToday.length > 6 && (
+              <li className="text-sm text-gray-500">
+                +{doToday.length - 6} more below
+              </li>
+            )}
+          </ul>
+        )}
       </div>
 
       {/* Suggested Deadlines (Gmail) */}

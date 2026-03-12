@@ -40,6 +40,7 @@ export default function SettingsPage() {
   });
   const [canvasToken, setCanvasToken] = useState("");
   const [canvasUrl, setCanvasUrl] = useState("");
+  const [gradescopeCookie, setGradescopeCookie] = useState("");
   const [edToken, setEdToken] = useState("");
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
@@ -71,6 +72,22 @@ export default function SettingsPage() {
       }),
     });
     setCanvasToken("");
+    setSaving(false);
+    fetchData();
+  };
+
+  const saveGradescopeIntegration = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    await fetch("/api/integrations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "GRADESCOPE",
+        token: gradescopeCookie,
+      }),
+    });
+    setGradescopeCookie("");
     setSaving(false);
     fetchData();
   };
@@ -278,6 +295,68 @@ export default function SettingsPage() {
               className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save Canvas Integration"}
+            </button>
+          </form>
+        </div>
+
+        {/* Gradescope */}
+        <div className="mt-4 rounded-lg border border-gray-100 p-3">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
+                <span className="text-sm font-bold text-green-600">G</span>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Gradescope</p>
+                <p className="text-xs text-gray-500">
+                  {getIntegration("GRADESCOPE")?.status === "ACTIVE"
+                    ? "Connected"
+                    : "Uses session cookie (no official API)"}
+                </p>
+              </div>
+            </div>
+            {getIntegration("GRADESCOPE")?.status === "ACTIVE" && (
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <button
+                  onClick={() => syncSource("GRADESCOPE")}
+                  disabled={syncing === "GRADESCOPE"}
+                  className="rounded-lg border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50"
+                >
+                  <RefreshCw
+                    className={`h-3.5 w-3.5 ${
+                      syncing === "GRADESCOPE" ? "animate-spin" : ""
+                    }`}
+                  />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {getIntegration("GRADESCOPE")?.error && (
+            <div className="mb-3 flex items-center gap-2 rounded-lg bg-red-50 p-2 text-sm text-red-700">
+              <XCircle className="h-4 w-4" />
+              {getIntegration("GRADESCOPE")!.error}
+            </div>
+          )}
+
+          <form onSubmit={saveGradescopeIntegration} className="space-y-2">
+            <input
+              type="password"
+              value={gradescopeCookie}
+              onChange={(e) => setGradescopeCookie(e.target.value)}
+              placeholder="Gradescope session cookie (_gradescope_session)"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none"
+            />
+            <p className="text-xs text-gray-400">
+              Copy from browser DevTools → Application → Cookies after logging into gradescope.com. Expires when you log out.
+            </p>
+            <button
+              type="submit"
+              disabled={saving || !gradescopeCookie}
+              className="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save Gradescope"}
             </button>
           </form>
         </div>
