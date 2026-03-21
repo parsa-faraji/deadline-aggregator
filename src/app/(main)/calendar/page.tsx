@@ -92,6 +92,9 @@ export default function CalendarPage() {
           <span className="h-3 w-3 rounded-full bg-green-500" /> Gradescope
         </span>
         <span className="flex items-center gap-1">
+          <span className="h-3 w-3 rounded-full bg-purple-500" /> Ed Discussion
+        </span>
+        <span className="flex items-center gap-1">
           <span className="h-3 w-3 rounded-full bg-violet-500" /> Study Session
         </span>
       </div>
