@@ -4,9 +4,9 @@ const sql = neon(process.env.DATABASE_URL, { arrayMode: false, fullResults: fals
 
 const statements = [
   `CREATE SCHEMA IF NOT EXISTS "public"`,
-  `CREATE TYPE "IntegrationType" AS ENUM ('GOOGLE_CALENDAR', 'CANVAS', 'GMAIL', 'GRADESCOPE')`,
+  `CREATE TYPE "IntegrationType" AS ENUM ('GOOGLE_CALENDAR', 'CANVAS', 'GMAIL', 'GRADESCOPE', 'ED_DISCUSSION')`,
   `CREATE TYPE "IntegrationStatus" AS ENUM ('ACTIVE', 'ERROR', 'DISABLED')`,
-  `CREATE TYPE "DeadlineSource" AS ENUM ('GOOGLE_CALENDAR', 'CANVAS', 'GMAIL', 'GRADESCOPE', 'MANUAL')`,
+  `CREATE TYPE "DeadlineSource" AS ENUM ('GOOGLE_CALENDAR', 'CANVAS', 'GMAIL', 'GRADESCOPE', 'ED_DISCUSSION', 'MANUAL')`,
   `CREATE TYPE "Priority" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'URGENT')`,
   `CREATE TYPE "DeadlineStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'DISMISSED')`,
 
